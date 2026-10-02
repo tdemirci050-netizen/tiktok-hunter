@@ -1,0 +1,22 @@
+name: TikTok Hunter
+
+on:
+  workflow_dispatch: # İSTEDİĞİN ZAMAN MANUEL OLARAK ÇALIŞTIRABİLMEK İÇİN
+  schedule:
+    - cron: '0 */6 * * *' # İsteğe bağlı: Her 6 saatte bir otomatik çalıştırır
+
+jobs:
+  build:
+  runs-on: ubuntu-latest
+
+  steps:
+  - name: Depoyu Kodu İndir
+    uses: actions/checkout@v4
+
+  - name: Python Kurulumu
+    uses: actions/setup-python@v5
+    with:
+      python-version: '3.10'
+
+  - name: Botu Çalıştır
+    run: python main.py
