@@ -5,32 +5,46 @@ import json
 import time
 import random
 
-PROXIES = [
-    # "IP_ADRESI:PORT",
-]
+# Geonode'dan kopyaladığın URL'yi buraya yapıştırabilirsin
+PROXY_URL = "https://proxylist.geonode.com/api/proxy-list?country=IN&protocols=http%2Chttps&filterLastChecked=60&page=1&limit=500&sort_by=responseTime&sort_type=asc"
 
-def get_random_proxy():
-    if not PROXIES:
-        return None
-    return random.choice(PROXIES)
+def fetch_proxies():
+    try:
+        req = urllib.request.Request(PROXY_URL, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            proxies = []
+            for item in data.get("data", []):
+                ip = item.get("ip")
+                port = item.get("port")
+                protocols = item.get("protocols", [])
+                if ip and port and ("http" in protocols or "https" in protocols):
+                    proxies.append(f"{ip}:{port}")
+            return proxies
+    except Exception:
+        return []
 
-def check_tiktok_email(email):
+def check_tiktok_email(email, proxies):
     url = f"https://www.tiktok.com/api/v1/web/account/register/check/email/?email={urllib.parse.quote(email)}"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
         "Referer": "https://www.tiktok.com/signup",
         "Accept": "application/json, text/plain, */*"
     }
     
-    proxy = get_random_proxy()
+    proxy = random.choice(proxies) if proxies else None
+    opener = urllib.request.build_opener()
+    
     if proxy:
-        proxy_handler = urllib.request.ProxyHandler({'http': proxy, 'https': proxy})
-        opener = urllib.request.build_opener(proxy_handler)
-        urllib.request.install_opener(opener)
-        
+        try:
+            proxy_handler = urllib.request.ProxyHandler({'http': proxy, 'https': proxy})
+            opener = urllib.request.build_opener(proxy_handler)
+        except Exception:
+            pass
+            
     req = urllib.request.Request(url, headers=headers, method="GET")
     try:
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with opener.open(req, timeout=10) as response:
             res_data = response.read().decode("utf-8")
             res_json = json.loads(res_data)
             is_registered = res_json.get("data", {}).get("is_registered")
@@ -54,7 +68,7 @@ def generate_target_emails():
     mena_last = ["khan", "al", "bin", "ahmed", "hassan", "malik", "mansour", "nasser", "saeed"]
     
     emails = set()
-    while len(emails) < 30:
+    while len(emails) < 20:
         fn = random.choice(india_first + mena_first)
         ln = random.choice(india_last + mena_last)
         token = str(random.randint(1990, 2005))
@@ -63,20 +77,23 @@ def generate_target_emails():
     return list(emails)
 
 if __name__ == "__main__":
-    print("[*] TikTok Hunter (Hint & MENA) Taraması Başlatıldı...")
+    print("[*] Proxy Listesi Alınıyor...")
+    proxies = fetch_proxies()
+    print(f"[*] Toplam {len(proxies)} adet proxy yüklendi.")
+    
     target_emails = generate_target_emails()
-    print(f"[*] Toplam {len(target_emails)} adet e-posta hedefi oluşturuldu ve taranıyor...\n")
+    print(f"[*] Toplam {len(target_emails)} adet e-posta taranıyor...\n")
     
     for email in target_emails:
-        result = check_tiktok_email(email)
+        result = check_tiktok_email(email, proxies)
         if result == "AVAILABLE":
             print(f"[+] BOŞTA HESAP BULUNDU: {email}")
         elif result == "TAKEN":
             print(f"[-] Dolu: {email}")
         elif result == "RATE_LIMIT":
-            print(f"[!] 429 Hız Sınırı (Rate Limit) yendi, bekleniyor...")
-            time.sleep(15)
+            print(f"[!] 429 Hız Sınırı, bekleniyor...")
+            time.sleep(10)
         else:
-            print(f"[!] Koruma / Engel: {email} (Durum: {result})")
+            print(f"[!] Durum: {email} -> {result}")
         
-        time.sleep(random.uniform(3.0, 6.0))
+        time.sleep(random.uniform(2.0, 4.0))
