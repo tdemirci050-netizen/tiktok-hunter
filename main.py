@@ -1,13 +1,14 @@
-# language: Python, file: main.py, target: GitHub/Render, Python 3.8+
+# language: Python, file: main.py, target: GitHub Actions
 import urllib.request
 import urllib.parse
 import json
 import time
 import random
 
-# Proxy Listesi (Buraya kendi kullanacağın proxy IP:Port adreslerini ekleyebilirsin)
+# Eğer elinde ücretsiz proxy'ler varsa buraya "IP:Port" şeklinde ekleyebilirsin.
+# Boş bırakırsan doğrudan kendi sunucu IP'si ile dener (ancak test için iyidir).
 PROXIES = [
-    # Örnek: "IP_ADRESI:PORT",
+    # "IP_ADRESI:PORT",
 ]
 
 def get_random_proxy():
@@ -18,7 +19,7 @@ def get_random_proxy():
 def check_tiktok_email(email):
     url = f"https://www.tiktok.com/api/v1/web/account/register/check/email/?email={urllib.parse.quote(email)}"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Referer": "https://www.tiktok.com/signup",
         "Accept": "application/json, text/plain, */*"
     }
@@ -36,9 +37,9 @@ def check_tiktok_email(email):
             res_json = json.loads(res_data)
             is_registered = res_json.get("data", {}).get("is_registered")
             if is_registered == 0:
-                return "AVAILABLE"
+                return "AVAILABLE" # BOŞTA (Hesap açılabilir)
             elif is_registered == 1:
-                return "TAKEN"
+                return "TAKEN"     # DOLU (Zaten hesap var)
             return "UNKNOWN"
     except urllib.error.HTTPError as e:
         if e.code == 429:
@@ -47,23 +48,28 @@ def check_tiktok_email(email):
     except Exception:
         return "BLOCKED"
 
-def generate_emails():
-    india_first = ["rahul", "amit", "rohit", "vikram", "sandeep", "manish", "ajay", "vijay"]
-    india_last = ["patel", "sharma", "gupta", "kumar", "singh", "verma"]
-    mena_first = ["mohamed", "ahmed", "ali", "ibrahim", "youssef", "omar"]
-    mena_last = ["khan", "al", "bin", "ahmed", "hassan", "malik"]
+def generate_target_emails():
+    # Hint ve MENA (Arap) bölgesi popüler isim soyisim kalıpları
+    india_first = ["rahul", "amit", "rohit", "vikram", "sandeep", "manish", "ajay", "vijay", "sachin", "karan"]
+    india_last = ["patel", "sharma", "gupta", "kumar", "singh", "verma", "yadav", "jain", "reddy"]
+    
+    mena_first = ["mohamed", "ahmed", "ali", "ibrahim", "youssef", "omar", "tariq", "bilal", "hamza", "zain"]
+    mena_last = ["khan", "al", "bin", "ahmed", "hassan", "malik", "mansour", "nasser", "saeed"]
     
     emails = set()
-    while len(emails) < 50:
+    # Her çalıştırmada rastgele 30 farklı kombinasyon üretir
+    while len(emails) < 30:
         fn = random.choice(india_first + mena_first)
         ln = random.choice(india_last + mena_last)
-        token = str(random.randint(2013, 2020))
+        token = str(random.randint(1990, 2005))
         emails.add(f"{fn}.{ln}{token}@gmail.com".lower())
+        
     return list(emails)
 
 if __name__ == "__main__":
-    print("[*] TikTok Hunter Başlatıldı...")
-    target_emails = generate_emails()
+    print("[*] TikTok Hunter (Hint & MENA) Taraması Başlatıldı...")
+    target_emails = generate_target_emails()
+    print(f[*] Toplam {len(target_emails)} adet e-posta hedefi oluşturuldu ve taranıyor...\n")
     
     for email in target_emails:
         result = check_tiktok_email(email)
@@ -72,8 +78,10 @@ if __name__ == "__main__":
         elif result == "TAKEN":
             print(f"[-] Dolu: {email}")
         elif result == "RATE_LIMIT":
-            print(f"[!] 429 Engeli, bekleniyor...")
-            time.sleep(20)
+            print(f"[!] 429 Hız Sınırı (Rate Limit) yendi, bekleniyor...")
+            time.sleep(15)
         else:
-            print(f"[-] Engellendi/Koruma: {email}")
-        time.sleep(random.uniform(2.0, 4.0))
+            print(f"[!] Koruma / Engel: {email} (Durum: {result})")
+        
+        # Bot gibi görünmemek için istekler arası rastgele bekleme süresi
+        time.sleep(random.uniform(3.0, 6.0))
