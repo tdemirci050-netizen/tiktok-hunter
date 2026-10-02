@@ -5,8 +5,6 @@ import json
 import time
 import random
 
-# Eğer elinde ücretsiz proxy'ler varsa buraya "IP:Port" şeklinde ekleyebilirsin.
-# Boş bırakırsan doğrudan kendi sunucu IP'si ile dener (ancak test için iyidir).
 PROXIES = [
     # "IP_ADRESI:PORT",
 ]
@@ -37,9 +35,9 @@ def check_tiktok_email(email):
             res_json = json.loads(res_data)
             is_registered = res_json.get("data", {}).get("is_registered")
             if is_registered == 0:
-                return "AVAILABLE" # BOŞTA (Hesap açılabilir)
+                return "AVAILABLE"
             elif is_registered == 1:
-                return "TAKEN"     # DOLU (Zaten hesap var)
+                return "TAKEN"
             return "UNKNOWN"
     except urllib.error.HTTPError as e:
         if e.code == 429:
@@ -49,7 +47,6 @@ def check_tiktok_email(email):
         return "BLOCKED"
 
 def generate_target_emails():
-    # Hint ve MENA (Arap) bölgesi popüler isim soyisim kalıpları
     india_first = ["rahul", "amit", "rohit", "vikram", "sandeep", "manish", "ajay", "vijay", "sachin", "karan"]
     india_last = ["patel", "sharma", "gupta", "kumar", "singh", "verma", "yadav", "jain", "reddy"]
     
@@ -57,7 +54,6 @@ def generate_target_emails():
     mena_last = ["khan", "al", "bin", "ahmed", "hassan", "malik", "mansour", "nasser", "saeed"]
     
     emails = set()
-    # Her çalıştırmada rastgele 30 farklı kombinasyon üretir
     while len(emails) < 30:
         fn = random.choice(india_first + mena_first)
         ln = random.choice(india_last + mena_last)
@@ -69,7 +65,7 @@ def generate_target_emails():
 if __name__ == "__main__":
     print("[*] TikTok Hunter (Hint & MENA) Taraması Başlatıldı...")
     target_emails = generate_target_emails()
-    print(f[*] Toplam {len(target_emails)} adet e-posta hedefi oluşturuldu ve taranıyor...\n")
+    print(f"[*] Toplam {len(target_emails)} adet e-posta hedefi oluşturuldu ve taranıyor...\n")
     
     for email in target_emails:
         result = check_tiktok_email(email)
@@ -83,5 +79,4 @@ if __name__ == "__main__":
         else:
             print(f"[!] Koruma / Engel: {email} (Durum: {result})")
         
-        # Bot gibi görünmemek için istekler arası rastgele bekleme süresi
         time.sleep(random.uniform(3.0, 6.0))
