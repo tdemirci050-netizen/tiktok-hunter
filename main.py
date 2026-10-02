@@ -5,53 +5,33 @@ import json
 import time
 import random
 
-# Geonode'dan kopyaladığın URL'yi buraya yapıştırabilirsin
-PROXY_URL = "https://proxylist.geonode.com/api/proxy-list?country=IN&protocols=http%2Chttps&filterLastChecked=60&page=1&limit=500&sort_by=responseTime&sort_type=asc"
-
-def fetch_proxies():
-    try:
-        req = urllib.request.Request(PROXY_URL, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode("utf-8"))
-            proxies = []
-            for item in data.get("data", []):
-                ip = item.get("ip")
-                port = item.get("port")
-                protocols = item.get("protocols", [])
-                if ip and port and ("http" in protocols or "https" in protocols):
-                    proxies.append(f"{ip}:{port}")
-            return proxies
-    except Exception:
-        return []
-
-def check_tiktok_email(email, proxies):
-    url = f"https://www.tiktok.com/api/v1/web/account/register/check/email/?email={urllib.parse.quote(email)}"
+def check_tiktok_email_mobile(email):
+    # TikTok mobil uygulamasının kayıt/kontrol API uç noktası
+    url = f"https://api16-normal-useast5.tiktokv.com/passport/email/check_email_registered/?email={urllib.parse.quote(email)}"
+    
+    # Gerçek bir iPhone / TikTok mobil uygulamasından atılıyormuş gibi simüle edilen başlıklar
     headers = {
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-        "Referer": "https://www.tiktok.com/signup",
-        "Accept": "application/json, text/plain, */*"
+        "User-Agent": "com.zhiliaoapp.musically/28.3.4 (iPhone; iOS 16.6; Scale/3.00)",
+        "sdk-version": "2",
+        "app-type": "normal",
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "accept-encoding": "gzip, deflate"
     }
     
-    proxy = random.choice(proxies) if proxies else None
-    opener = urllib.request.build_opener()
-    
-    if proxy:
-        try:
-            proxy_handler = urllib.request.ProxyHandler({'http': proxy, 'https': proxy})
-            opener = urllib.request.build_opener(proxy_handler)
-        except Exception:
-            pass
-            
     req = urllib.request.Request(url, headers=headers, method="GET")
     try:
-        with opener.open(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=10) as response:
             res_data = response.read().decode("utf-8")
             res_json = json.loads(res_data)
-            is_registered = res_json.get("data", {}).get("is_registered")
+            
+            # Mobil API yanıt yapısı kontrolü
+            data = res_json.get("data", {})
+            is_registered = data.get("is_registered")
+            
             if is_registered == 0:
-                return "AVAILABLE"
+                return "AVAILABLE" # BOŞTA (Kayıtlı değil)
             elif is_registered == 1:
-                return "TAKEN"
+                return "TAKEN"     # DOLU (Kayıtlı)
             return "UNKNOWN"
     except urllib.error.HTTPError as e:
         if e.code == 429:
@@ -68,7 +48,7 @@ def generate_target_emails():
     mena_last = ["khan", "al", "bin", "ahmed", "hassan", "malik", "mansour", "nasser", "saeed"]
     
     emails = set()
-    while len(emails) < 20:
+    while len(emails) < 25:
         fn = random.choice(india_first + mena_first)
         ln = random.choice(india_last + mena_last)
         token = str(random.randint(1990, 2005))
@@ -77,23 +57,21 @@ def generate_target_emails():
     return list(emails)
 
 if __name__ == "__main__":
-    print("[*] Proxy Listesi Alınıyor...")
-    proxies = fetch_proxies()
-    print(f"[*] Toplam {len(proxies)} adet proxy yüklendi.")
-    
+    print("[*] TikTok Mobil API Tarayıcısı Başlatıldı...")
     target_emails = generate_target_emails()
     print(f"[*] Toplam {len(target_emails)} adet e-posta taranıyor...\n")
     
     for email in target_emails:
-        result = check_tiktok_email(email, proxies)
+        result = check_tiktok_email_mobile(email)
         if result == "AVAILABLE":
             print(f"[+] BOŞTA HESAP BULUNDU: {email}")
         elif result == "TAKEN":
-            print(f"[-] Dolu: {email}")
+            print(f"[-] Dolu (Kayıtlı): {email}")
         elif result == "RATE_LIMIT":
             print(f"[!] 429 Hız Sınırı, bekleniyor...")
             time.sleep(10)
         else:
             print(f"[!] Durum: {email} -> {result}")
         
-        time.sleep(random.uniform(2.0, 4.0))
+        # Mobil API istekleri arasında ban yememek için kısa bekleme
+        time.sleep(random.uniform(1.5, 3.0))
